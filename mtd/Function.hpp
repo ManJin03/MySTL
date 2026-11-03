@@ -63,15 +63,34 @@ namespace mtd
         // ReSharper disable once CppNonExplicitConvertingConstructor
         Function(Func&& func) : m_base(std::make_unique<FuncImpl<std::decay_t<Func>>>(std::in_place , func)) {}
 
-        Function(const Function& other)
+        Function(const Function& other) : m_base{other.m_base ? other.m_base->clone() : nullptr} {};
+
+        Function& operator=(const Function& other)
         {
-            if (static_cast<bool>(other)) {
+            if (other.m_base) {
                 m_base = other.m_base->clone();
             }
-        };
+            else {
+                m_base = nullptr;
+            }
+            return *this;
+        }
 
+        Function(Function&&) = default;
+
+        Function& operator=(Function&&) = default;
 
         explicit operator bool() const noexcept
+        {
+            return m_base != nullptr;
+        }
+
+        bool operator==(std::nullptr_t) const noexcept
+        {
+            return m_base == nullptr;
+        }
+
+        bool operator!=(std::nullptr_t) const noexcept
         {
             return m_base != nullptr;
         }
@@ -82,15 +101,31 @@ namespace mtd
                     throw std::bad_function_call();
             return m_base->call(std::forward<Args>(args)...);
         }
+
+        [[nodiscard]] std::type_info const& target_type() const
+        {
+            return m_base ? m_base->type() : typeid(void);
+        }
+
+        template <class Fn>
+        Fn* target() noexcept
+        {
+            return m_base && typeid(Fn) == m_base->type()
+                       ? std::addressof(static_cast<FuncImpl<Fn>*>(m_base.get())->m_func)
+                       : nullptr;
+        }
+
+        template <class Fn>
+        const Fn* target() const noexcept
+        {
+            return m_base && typeid(Fn) == m_base->type()
+                       ? std::addressof(static_cast<const FuncImpl<Fn>*>(m_base.get())->m_func)
+                       : nullptr;
+        }
+
+        void swap(Function& other) noexcept
+        {
+            m_base.swap(other.m_base);
+        }
     };
-}
-
-void foo() {}
-
-void bar() {}
-
-int main()
-{
-    std::function<void()> fun;
-    mtd::Function<void()> f;
 }
