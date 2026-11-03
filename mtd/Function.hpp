@@ -6,13 +6,13 @@
 namespace mtd
 {
     template <typename FnSig>
-    class Function
+    class move_only_Function
     {
         static_assert(!std::is_same_v<FnSig,FnSig> , "invalid function signature");
     };
 
     template <typename Ret , typename... Args>
-    class Function<Ret(Args...)>
+    class move_only_Function<Ret(Args...)>
     {
         struct FuncBase
         {
@@ -31,7 +31,7 @@ namespace mtd
             Func m_func;
 
             template <typename... CArgs>
-            explicit FuncImpl(std::in_place_t , CArgs... args) : m_func(std::forward<CArgs>(args)...) {}
+            explicit FuncImpl(std::in_place_t , CArgs&&... args) : m_func(std::forward<CArgs>(args)...) {}
 
             Ret call(Args... args) override
             {
@@ -52,20 +52,21 @@ namespace mtd
         std::unique_ptr<FuncBase> m_base;
 
     public:
-        Function() noexcept = default;
+        move_only_Function() noexcept = default;
 
-        Function(std::nullptr_t) noexcept : Function() {}
+        move_only_Function(std::nullptr_t) noexcept : move_only_Function() {}
 
         template <typename Func>
             requires (std::is_invocable_r_v<Ret,Func,Args...>
                       && std::is_copy_constructible_v<Func>
-                      && !std::is_same_v<std::decay_t<Func>,Function>)
+                      && !std::is_same_v<std::decay_t<Func>,move_only_Function>)
         // ReSharper disable once CppNonExplicitConvertingConstructor
-        Function(Func&& func) : m_base(std::make_unique<FuncImpl<std::decay_t<Func>>>(std::in_place , func)) {}
+        move_only_Function(Func&& func) : m_base(
+            std::make_unique<FuncImpl<std::decay_t<Func>>>(std::in_place , func)) {}
 
-        Function(const Function& other) : m_base{other.m_base ? other.m_base->clone() : nullptr} {};
+        move_only_Function(const move_only_Function& other) : m_base{other.m_base ? other.m_base->clone() : nullptr} {};
 
-        Function& operator=(const Function& other)
+        move_only_Function& operator=(const move_only_Function& other)
         {
             if (other.m_base) {
                 m_base = other.m_base->clone();
@@ -76,9 +77,9 @@ namespace mtd
             return *this;
         }
 
-        Function(Function&&) = default;
+        move_only_Function(move_only_Function&&) = default;
 
-        Function& operator=(Function&&) = default;
+        move_only_Function& operator=(move_only_Function&&) = default;
 
         explicit operator bool() const noexcept
         {
@@ -123,7 +124,7 @@ namespace mtd
                        : nullptr;
         }
 
-        void swap(Function& other) noexcept
+        void swap(move_only_Function& other) noexcept
         {
             m_base.swap(other.m_base);
         }
