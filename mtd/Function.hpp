@@ -60,7 +60,7 @@ namespace mtd
             requires (std::is_invocable_r_v<Ret,Func,Args...>
                       && std::is_copy_constructible_v<Func>
                       && !std::is_same_v<std::decay_t<Func>,move_only_Function>)
-        // ReSharper disable once CppNonExplicitConvertingConstructor
+
         move_only_Function(Func&& func) : m_base(
             std::make_unique<FuncImpl<std::decay_t<Func>>>(std::in_place , func)) {}
 
