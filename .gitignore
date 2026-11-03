@@ -1,8 +1,9 @@
-#CLion
+#Editor
 .idea
+.vscode
+
 # test code
 main
-main.cpp
 # Prerequisites
 *.d
 
